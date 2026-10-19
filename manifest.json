@@ -1,0 +1,15 @@
+{
+  "name": "Boru Tasarım Basıncı",
+  "short_name": "Boru Hesap",
+  "description": "ASME VIII-1 / B31.3 boru tasarım basıncı, et kalınlığı, dayanım, ligament ve tank hesapları",
+  "lang": "tr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#EDF0F3",
+  "theme_color": "#0F5E8C",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

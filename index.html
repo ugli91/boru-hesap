@@ -1,0 +1,745 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Boru Hesap">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#0F5E8C">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Boru Tasarım Basıncı</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: iOS-style inset grouped lists, result card on top of each tab, fixed bottom tab bar. Yellow-tinted cells = inputs (same convention as the Excel sheet). */
+:root {
+  --bg: #EDF0F3;
+  --surface: #FFFFFF;
+  --surface-2: #F6F8FA;
+  --ink: #15212C;
+  --muted: #5A6A79;
+  --line: #D6DDE4;
+  --accent: #0F5E8C;
+  --accent-ink: #FFFFFF;
+  --input-bg: #FFF6D2;
+  --input-ink: #0A4FA6;
+  --ok: #1D7643; --ok-bg: #E3F3E9;
+  --warn: #9A5B00; --warn-bg: #FCF0D9;
+  --bad: #B42318; --bad-bg: #FBE6E4;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", -apple-system, system-ui, "Segoe UI", sans-serif;
+  --font-num: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --radius: 12px;
+  --tabbar-h: 58px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0D1318; --surface: #171F28; --surface-2: #1D2731; --ink: #E5ECF2; --muted: #8C9BAA; --line: #283440;
+    --accent: #5EB3E8; --accent-ink: #06202F; --input-bg: #2B2714; --input-ink: #93C5FF;
+    --ok: #5FD08E; --ok-bg: #12301F; --warn: #F0B455; --warn-bg: #352610; --bad: #FF8A7E; --bad-bg: #3A1714;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0D1318; --surface: #171F28; --surface-2: #1D2731; --ink: #E5ECF2; --muted: #8C9BAA; --line: #283440;
+  --accent: #5EB3E8; --accent-ink: #06202F; --input-bg: #2B2714; --input-ink: #93C5FF;
+  --ok: #5FD08E; --ok-bg: #12301F; --warn: #F0B455; --warn-bg: #352610; --bad: #FF8A7E; --bad-bg: #3A1714;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { background: var(--bg); }
+body {
+  color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.4;
+  -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent;
+}
+.wrap {
+  max-width: 640px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 12px calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 24px);
+}
+header.top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-top: 8px; }
+.eyebrow { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: 30px; line-height: 1.1; margin: 2px 0 4px; text-wrap: balance; }
+.lede { color: var(--muted); margin: 0 0 16px; font-size: 14px; max-width: 60ch; }
+.linkbtn { background: none; border: 0; color: var(--accent); font: inherit; font-size: 14px; padding: 6px 0; cursor: pointer; white-space: nowrap; }
+.linkbtn:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+
+/* Result card */
+.result { background: var(--surface); border-radius: var(--radius); padding: 16px; margin-bottom: 22px; border: 1px solid var(--line); }
+.result .label { font-size: 13px; color: var(--muted); }
+.big { font-family: var(--font-num); font-size: 40px; font-weight: 600; line-height: 1.05; letter-spacing: -.02em; font-variant-numeric: tabular-nums; margin-top: 2px; }
+.big small { font-size: 18px; font-weight: 500; color: var(--muted); margin-left: 4px; letter-spacing: 0; }
+.sub { font-family: var(--font-num); color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+.kv3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.kv3 .v { font-family: var(--font-num); font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.kv3 .v small { font-size: 12px; color: var(--muted); font-weight: 400; margin-left: 2px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px; font-size: 12.5px; font-weight: 600; line-height: 1.3; }
+.pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; }
+.pill.ok { color: var(--ok); background: var(--ok-bg); }
+.pill.warn { color: var(--warn); background: var(--warn-bg); }
+.pill.bad { color: var(--bad); background: var(--bad-bg); }
+.pill.info { color: var(--accent); background: var(--surface-2); }
+.pill.info::before { display: none; }
+
+.meter { margin-top: 14px; }
+.meter .row { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin-bottom: 6px; gap: 8px; }
+.meter .row b { font-family: var(--font-num); color: var(--ink); font-weight: 600; }
+.bar { height: 8px; border-radius: 4px; background: var(--surface-2); border: 1px solid var(--line); overflow: hidden; position: relative; }
+.bar i { display: block; height: 100%; background: var(--ok); border-radius: 4px; transition: width .25s ease; }
+.bar.warn i { background: var(--warn); } .bar.bad i { background: var(--bad); }
+
+/* Grouped lists */
+.group-title { font-size: 12px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin: 0 4px 6px; display: flex; justify-content: space-between; gap: 8px; }
+.group-title .ref { text-transform: none; letter-spacing: 0; font-weight: 500; font-family: var(--font-num); font-size: 11.5px; }
+.list { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--line); margin-bottom: 22px; overflow: hidden; }
+.cell { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 8px 14px; border-top: 1px solid var(--line); }
+.cell:first-child { border-top: 0; }
+.cell .name { flex: 1 1 auto; min-width: 0; }
+.cell .name .h { font-size: 12px; color: var(--muted); display: block; margin-top: 1px; }
+.cell .val { font-family: var(--font-num); font-variant-numeric: tabular-nums; text-align: right; font-weight: 500; white-space: nowrap; }
+.cell .val small { color: var(--muted); font-weight: 400; margin-left: 3px; font-size: 12px; }
+.cell.in { background: var(--input-bg); }
+.cell.in label { flex: 1 1 auto; min-width: 0; cursor: text; }
+.field { display: flex; align-items: center; gap: 6px; flex: none; }
+.field input {
+  width: 96px; text-align: right; font-family: var(--font-num); font-size: 17px; font-weight: 500;
+  color: var(--input-ink); background: transparent; border: 0; border-bottom: 1px dashed color-mix(in srgb, var(--input-ink) 45%, transparent);
+  padding: 4px 0; border-radius: 0;
+}
+.field input::placeholder { color: var(--muted); font-weight: 400; font-size: 14px; }
+.field .u { color: var(--muted); font-size: 13px; min-width: 28px; }
+.sign { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; font: 600 15px var(--font-num); width: 34px; height: 30px; cursor: pointer; }
+select {
+  font: 500 15px var(--font-body); color: var(--input-ink); background: transparent; border: 0;
+  max-width: 62vw; text-align: right; text-align-last: right; padding: 4px 0; appearance: none; -webkit-appearance: none; cursor: pointer;
+}
+.cell.select-cell .chev { color: var(--muted); font-size: 13px; }
+.status-cell .val { white-space: normal; }
+
+details.list > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; font-weight: 600; }
+details.list > summary::-webkit-details-marker { display: none; }
+details.list > summary .chev { transition: transform .2s; color: var(--muted); }
+details.list[open] > summary .chev { transform: rotate(90deg); }
+details.list[open] > summary { border-bottom: 1px solid var(--line); }
+.note { padding: 12px 14px; font-size: 13.5px; color: var(--muted); border-top: 1px solid var(--line); }
+.note:first-child { border-top: 0; }
+.note b { color: var(--ink); }
+.banner { border-radius: var(--radius); padding: 12px 14px; font-size: 13.5px; margin-bottom: 16px; background: var(--warn-bg); color: var(--warn); border: 1px solid color-mix(in srgb, var(--warn) 30%, transparent); }
+.banner b { font-weight: 700; }
+.linked { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 10px 14px; font-family: var(--font-num); font-size: 13px; background: var(--surface-2); color: var(--muted); }
+.linked b { color: var(--ink); font-weight: 600; }
+
+/* Material table + formula list */
+.tablewrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table { border-collapse: collapse; font-family: var(--font-num); font-size: 12.5px; font-variant-numeric: tabular-nums; min-width: 640px; width: 100%; }
+th, td { padding: 7px 8px; text-align: right; border-top: 1px solid var(--line); white-space: nowrap; }
+th { color: var(--muted); font-weight: 600; background: var(--surface-2); border-top: 0; }
+th:first-child, td:first-child { text-align: left; font-family: var(--font-body); position: sticky; left: 0; background: var(--surface); }
+th:first-child { background: var(--surface-2); }
+tr.sel td { color: var(--accent); font-weight: 600; }
+.formula { padding: 10px 14px; border-top: 1px solid var(--line); }
+.formula:first-child { border-top: 0; }
+.formula .t { font-size: 13px; color: var(--muted); }
+.formula code { font-family: var(--font-num); font-size: 13.5px; display: block; margin-top: 2px; white-space: normal; overflow-wrap: anywhere; }
+
+/* Tab bar */
+nav.tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  -webkit-backdrop-filter: saturate(1.6) blur(16px); backdrop-filter: saturate(1.6) blur(16px);
+  border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px);
+}
+nav.tabbar .in { max-width: 640px; margin: 0 auto; display: grid; grid-template-columns: repeat(6, 1fr); height: var(--tabbar-h); }
+nav.tabbar button {
+  background: none; border: 0; color: var(--muted); display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px; font: 500 10.5px var(--font-body); cursor: pointer; padding: 0 2px; min-width: 0;
+}
+nav.tabbar button svg { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+nav.tabbar button[aria-selected="true"] { color: var(--accent); }
+nav.tabbar button span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.foot { font-size: 12px; color: var(--muted); text-align: center; margin-top: 8px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="eyebrow">ASME VIII-1 · B31.3</div>
+    <button class="linkbtn" id="resetBtn" type="button">Örnek değerler</button>
+  </header>
+
+  <!-- ===================== MAWP (Hesap) ===================== -->
+  <section data-tab="hesap">
+    <h1>Tasarım basıncı</h1>
+    <p class="lede">Çapı ve et kalınlığı bilinen borunun izin verilen tasarım basıncını (MAWP) hesaplar.</p>
+
+    <div class="result">
+      <div class="label">MAWP (belirleyici)</div>
+      <div class="big"><span data-o="mawpBar" data-d="1"></span><small>bar</small></div>
+      <div class="sub"><span data-o="mawp" data-d="2"></span> MPa</div>
+      <div class="chips"><span class="pill info" data-o="method"></span></div>
+      <div class="kv3">
+        <div><div class="label">Hidrostatik test (1,5×)</div><div class="v"><span data-o="testBar" data-d="1"></span><small>bar</small></div></div>
+        <div><div class="label">B31.3 izin verilen</div><div class="v"><span data-o="b313Bar" data-d="1"></span><small>bar</small></div></div>
+      </div>
+      <div class="meter">
+        <div class="row"><span>İşletme basıncı / MAWP</span><b data-o="usePct"></b></div>
+        <div class="bar" id="useBar"><i></i></div>
+        <div class="chips"><span data-o="useEval" class="pill"></span></div>
+      </div>
+    </div>
+
+    <div class="group-title">Boru</div>
+    <div class="list">
+      <div class="cell in"><label for="OD">Dış çap, OD</label><span class="field"><input id="OD" inputmode="decimal" autocomplete="off"><span class="u">mm</span></span></div>
+      <div class="cell in"><label for="tnom">Nominal et kalınlığı<span class="name"><span class="h">Sipariş edilen / ölçülen</span></span></label><span class="field"><input id="tnom" inputmode="decimal" autocomplete="off"><span class="u">mm</span></span></div>
+      <div class="cell in select-cell"><label for="mat">Malzeme</label><select id="mat"></select><span class="chev">›</span></div>
+      <div class="cell in"><label for="T">Tasarım sıcaklığı<span class="name"><span class="h" data-o="tempNote"></span></span></label><span class="field"><button class="sign" type="button" data-sign="T" aria-label="Sıcaklığın işaretini değiştir">±</button><input id="T" inputmode="decimal" autocomplete="off"><span class="u">°C</span></span></div>
+      <div class="cell in"><label for="E">Birleşim verimi, E<span class="name"><span class="h">Dikişsiz + spot RT 1,0 · RT yok 0,85 · dikişli 0,70</span></span></label><span class="field"><input id="E" inputmode="decimal" autocomplete="off"><span class="u">–</span></span></div>
+      <div class="cell in"><label for="tol">İmalat toleransı (−)<span class="name"><span class="h">Dikişsiz boru %12,5 · levha/dövme 0</span></span></label><span class="field"><input id="tol" inputmode="decimal" autocomplete="off"><span class="u">%</span></span></div>
+      <div class="cell in"><label for="c">Korozyon payı, c</label><span class="field"><input id="c" inputmode="decimal" autocomplete="off"><span class="u">mm</span></span></div>
+      <div class="cell in"><label for="Sman">S, manuel (opsiyonel)<span class="name"><span class="h">Doluysa malzeme tablosu yok sayılır</span></span></label><span class="field"><input id="Sman" inputmode="decimal" autocomplete="off" placeholder="tablo"><span class="u">MPa</span></span></div>
+    </div>
+
+    <div class="group-title">B31.3 katsayıları</div>
+    <div class="list">
+      <div class="cell in"><label for="W">Kaynak dayanım faktörü, W<span class="name"><span class="h">427 °C altında 1,0</span></span></label><span class="field"><input id="W" inputmode="decimal" autocomplete="off"><span class="u">–</span></span></div>
+      <div class="cell in"><label for="Y">Y katsayısı<span class="name"><span class="h">Ferritik/ostenitik, 482 °C altı 0,4</span></span></label><span class="field"><input id="Y" inputmode="decimal" autocomplete="off"><span class="u">–</span></span></div>
+    </div>
+
+    <div class="group-title">Gerilme kontrolü</div>
+    <div class="list">
+      <div class="cell in"><label for="Pop">İşletme / tasarım basıncı</label><span class="field"><input id="Pop" inputmode="decimal" autocomplete="off"><span class="u">bar</span></span></div>
+    </div>
+
+    <div class="group-title">Türetilen büyüklükler</div>
+    <div class="list">
+      <div class="cell"><span class="name">İzin verilen gerilme, S<span class="h" data-o="Ssrc"></span></span><span class="val"><span data-o="S" data-d="1"></span><small>MPa</small></span></div>
+      <div class="cell"><span class="name">Efektif et kalınlığı, t<span class="h">Tolerans ve korozyon düşülmüş</span></span><span class="val"><span data-o="t" data-d="2"></span><small>mm</small></span></div>
+      <div class="cell"><span class="name">Dış yarıçap, Ro</span><span class="val"><span data-o="Ro" data-d="2"></span><small>mm</small></span></div>
+      <div class="cell"><span class="name">İç yarıçap, R<span class="h">Korozyona uğramış durumda</span></span><span class="val"><span data-o="R" data-d="2"></span><small>mm</small></span></div>
+      <div class="cell"><span class="name">İç çap, ID</span><span class="val"><span data-o="ID" data-d="2"></span><small>mm</small></span></div>
+      <div class="cell"><span class="name">OD / t oranı</span><span class="val"><span data-o="ODt" data-d="2"></span></span></div>
+      <div class="cell"><span class="name">Cidar sınıfı</span><span class="val" data-o="wall"></span></div>
+    </div>
+
+    <details class="list" open>
+      <summary>Ayrıntılı sonuçlar <span class="chev">›</span></summary>
+      <div class="cell"><span class="name"><b>UG-27 · ince cidar</b></span></div>
+      <div class="cell"><span class="name">Çevresel · UG-27(c)(1)</span><span class="val"><span data-o="ug1Bar" data-d="1"></span><small>bar</small></span></div>
+      <div class="cell"><span class="name">Boyuna · UG-27(c)(2)</span><span class="val"><span data-o="ug2Bar" data-d="1"></span><small>bar</small></span></div>
+      <div class="cell status-cell"><span class="name">t ≤ 0,5·R</span><span class="val"><span data-o="chk1" class="pill"></span></span></div>
+      <div class="cell status-cell"><span class="name">P ≤ 0,385·S·E</span><span class="val"><span data-o="chk2" class="pill"></span></span></div>
+      <div class="cell"><span class="name"><b>Ek 1-2 · kalın cidar</b></span></div>
+      <div class="cell"><span class="name">Z = (Ro / R)²</span><span class="val" data-o="Z" data-d="4"></span></div>
+      <div class="cell"><span class="name">Çevresel · Ek 1-2(a)(1)</span><span class="val"><span data-o="a1Bar" data-d="1"></span><small>bar</small></span></div>
+      <div class="cell"><span class="name">Boyuna · Ek 1-2(a)(2)</span><span class="val"><span data-o="a2Bar" data-d="1"></span><small>bar</small></span></div>
+      <div class="cell"><span class="name"><b>B31.3 · para. 304.1.2</b></span></div>
+      <div class="cell"><span class="name">İzin verilen basınç</span><span class="val"><span data-o="b313Bar" data-d="1"></span><small>bar</small></span></div>
+      <div class="cell status-cell"><span class="name">t &lt; D/6</span><span class="val"><span data-o="b313ok" class="pill"></span></span></div>
+      <div class="cell"><span class="name"><b>Referans</b></span></div>
+      <div class="cell"><span class="name">Barlow (OD esaslı)</span><span class="val"><span data-o="barlowBar" data-d="1"></span><small>bar</small></span></div>
+    </details>
+
+    <details class="list">
+      <summary>Lamé gerilmeleri (bilgi amaçlı) <span class="chev">›</span></summary>
+      <div class="cell"><span class="name">Çevresel (hoop), iç yüzey</span><span class="val"><span data-o="lh" data-d="3"></span><small>MPa</small></span></div>
+      <div class="cell"><span class="name">Radyal, iç yüzey</span><span class="val"><span data-o="lr" data-d="3"></span><small>MPa</small></span></div>
+      <div class="cell"><span class="name">Eksenel (kapalı uç)</span><span class="val"><span data-o="la" data-d="3"></span><small>MPa</small></span></div>
+      <div class="cell"><span class="name">von Mises (maks.)</span><span class="val"><span data-o="lvm" data-d="3"></span><small>MPa</small></span></div>
+      <div class="cell"><span class="name">MAWP kullanım oranı<span class="h">1,00 üzerinde ise kalınlık yetersiz</span></span><span class="val" data-o="use" data-d="4"></span></div>
+    </details>
+  </section>
+
+  <!-- ===================== Ters Hesap ===================== -->
+  <section data-tab="ters" hidden>
+    <h1>Gereken et kalınlığı</h1>
+    <p class="lede">Tasarım basıncı bilinen boru için minimum ve sipariş edilecek et kalınlığını hesaplar.</p>
+
+    <div class="result">
+      <div class="label">Sipariş edilecek t (0,5 mm'ye yuvarlanmış)</div>
+      <div class="big"><span data-o="rRound" data-d="1"></span><small>mm</small></div>
+      <div class="sub">hesaplanan <span data-o="rOrder" data-d="2"></span> mm</div>
+      <div class="chips"><span class="pill info" data-o="rMethod"></span></div>
+      <div class="kv3">
+        <div><div class="label">t_min (belirleyici)</div><div class="v"><span data-o="rTmin" data-d="2"></span><small>mm</small></div></div>
+        <div><div class="label">Seçilen t ile marj</div><div class="v" data-o="rMarginPct"></div></div>
+      </div>
+      <div class="chips"><span class="pill" data-o="rEval"></span></div>
+    </div>
+
+    <div class="group-title">Girişler</div>
+    <div class="list">
+      <div class="cell in"><label for="rOD">Dış çap, OD</label><span class="field"><input id="rOD" inputmode="decimal" autocomplete="off"><span class="u">mm</span></span></div>
+      <div class="cell in"><label for="rP">Tasarım basıncı</label><span class="field"><input id="rP" inputmode="decimal" autocomplete="off"><span class="u">bar</span></span></div>
+      <div class="cell in"><label for="rTsel">Seçilen nominal kalınlık</label><span class="field"><input id="rTsel" inputmode="decimal" autocomplete="off"><span class="u">mm</span></span></div>
+      <div class="linked">Tasarım basıncı sekmesinden:
+        <span>S <b data-o="S" data-d="1"></b> MPa</span><span>E <b data-o="E" data-d="2"></b></span><span>tol. <b data-o="tol" data-d="1"></b> %</span><span>c <b data-o="c" data-d="2"></b> mm</span><span>W/Y <b data-o="WY"></b></span>
+      </div>
+    </div>
+
+    <details class="list" open>
+      <summary>Gereken minimum kalınlıklar <span class="chev">›</span></summary>
+      <div class="cell"><span class="name">Tasarım basıncı</span><span class="val"><span data-o="rPm" data-d="2"></span><small>MPa</small></span></div>
+      <div class="cell"><span class="name">UG-27(c)(1) · çevresel<span class="h">Dış yarıçap formu</span></span><span class="val"><span data-o="rUg1" data-d="2"></span><small>mm</small></span></div>
+      <div class="cell"><span class="name">UG-27(c)(2) · boyuna</span><span class="val"><span data-o="rUg2" data-d="2"></span><small>mm</small></span></div>
+      <div class="cell"><span class="name">Z (Ek 1-2)<span class="h">S·E ≤ P ise çözüm yok</span></span><span class="val" data-o="rZ" data-d="4"></span></div>
+      <div class="cell"><span class="name">Ek 1-2(a)(1) · çevresel</span><span class="val"><span data-o="rA1" data-d="2"></span><small>mm</small></span></div>
+      <div class="cell"><span class="name">Ek 1-2(a)(2) · boyuna</span><span class="val"><span data-o="rA2" data-d="2"></span><small>mm</small></span></div>
+      <div class="cell"><span class="name">ASME B31.3</span><span class="val"><span data-o="rB313" data-d="2"></span><small>mm</small></span></div>
+      <div class="cell"><span class="name">+ korozyon payı</span><span class="val"><span data-o="rWithC" data-d="2"></span><small>mm</small></span></div>
+      <div class="cell"><span class="name">İmalat toleransı dahil</span><span class="val"><span data-o="rOrder" data-d="2"></span><small>mm</small></span></div>
+    </details>
+  </section>
+
+  <!-- ===================== Dayanım ===================== -->
+  <section data-tab="dayanim" hidden>
+    <h1>Dayanım basıncı</h1>
+    <p class="lede">Akma, plastik çökme ve patlama basınçlarını tahmin eder.</p>
+    <div class="banner"><b>Kod izni değildir.</b> Bu değerler tasarım basıncı olarak kullanılamaz. Kusursuz, sünek, düz boru varsayılır; Rp0.2 ve Rm oda sıcaklığı değerleridir.</div>
+
+    <div class="result">
+      <div class="label">Patlama tahmini (Faupel)</div>
+      <div class="big"><span data-o="dFaupelBar" data-d="0"></span><small>bar</small></div>
+      <div class="sub">MAWP'nin <span data-o="dBurstMawp" data-d="2"></span> katı · işletmenin <span data-o="dBurstOp" data-d="1"></span> katı</div>
+      <div class="kv3">
+        <div><div class="label">İlk akma (von Mises)</div><div class="v"><span data-o="dYvmBar" data-d="0"></span><small>bar</small></div></div>
+        <div><div class="label">Tam plastik (von Mises)</div><div class="v"><span data-o="dLvmBar" data-d="0"></span><small>bar</small></div></div>
+      </div>
+      <div class="chips"><span class="pill" data-o="dYieldAtOp"></span></div>
+    </div>
+
+    <div class="group-title">Girişler <button class="linkbtn" type="button" id="pullGeom" style="padding:0;font-size:12.5px;text-transform:none;letter-spacing:0">Ro ve R'yi tasarım sekmesinden al</button></div>
+    <div class="list">
+      <div class="cell in"><label for="dRo">Dış yarıçap, Ro</label><span class="field"><input id="dRo" inputmode="decimal" autocomplete="off"><span class="u">mm</span></span></div>
+      <div class="cell in"><label for="dR">İç yarıçap, R</label><span class="field"><input id="dR" inputmode="decimal" autocomplete="off"><span class="u">mm</span></span></div>
+      <div class="cell in"><label for="dRp">Rp0.2, manuel (ops.)<span class="name"><span class="h" data-o="dRpSrc"></span></span></label><span class="field"><input id="dRp" inputmode="decimal" autocomplete="off" placeholder="tablo"><span class="u">MPa</span></span></div>
+      <div class="cell in"><label for="dRm">Rm, manuel (ops.)<span class="name"><span class="h" data-o="dRmSrc"></span></span></label><span class="field"><input id="dRm" inputmode="decimal" autocomplete="off" placeholder="tablo"><span class="u">MPa</span></span></div>
+      <div class="cell in"><label for="dPop">İşletme basıncı</label><span class="field"><input id="dPop" inputmode="decimal" autocomplete="off"><span class="u">bar</span></span></div>
+      <div class="linked"><span>K = Ro/R <b data-o="dK" data-d="3"></b></span><span>MAWP <b data-o="mawpBar" data-d="1"></b> bar</span></div>
+    </div>
+
+    <details class="list" open>
+      <summary>Akma ve plastik çökme <span class="chev">›</span></summary>
+      <div class="cell"><span class="name">İlk akma, iç yüzey · von Mises<span class="h">Akmanın başladığı basınç; boru hâlâ taşır</span></span><span class="val"><span data-o="dYvmBar" data-d="0"></span><small>bar</small></span></div>
+      <div class="cell"><span class="name">İlk akma, iç yüzey · Tresca</span><span class="val"><span data-o="dYtrBar" data-d="0"></span><small>bar</small></span></div>
+      <div class="cell"><span class="name">Tam plastik · von Mises<span class="h">Et kalınlığının tamamı akar</span></span><span class="val"><span data-o="dLvmBar" data-d="0"></span><small>bar</small></span></div>
+      <div class="cell"><span class="name">Tam plastik · Tresca</span><span class="val"><span data-o="dLtrBar" data-d="0"></span><small>bar</small></span></div>
+    </details>
+    <details class="list" open>
+      <summary>Patlama tahmini <span class="chev">›</span></summary>
+      <div class="cell"><span class="name">Basit (Rm esaslı)<span class="h">Genellikle üst sınır</span></span><span class="val"><span data-o="dBsBar" data-d="0"></span><small>bar</small></span></div>
+      <div class="cell"><span class="name">Faupel korelasyonu<span class="h">Deneyle daha iyi uyuşur, tercih edilir</span></span><span class="val"><span data-o="dFaupelBar" data-d="0"></span><small>bar</small></span></div>
+      <div class="cell"><span class="name">İki tahmin arasındaki fark</span><span class="val" data-o="dDiffPct"></span></div>
+    </details>
+    <details class="list" open>
+      <summary>Gerçek emniyet katsayıları <span class="chev">›</span></summary>
+      <div class="cell"><span class="name">İlk akma / MAWP</span><span class="val" data-o="dYMawp" data-d="2"></span></div>
+      <div class="cell"><span class="name">Tam plastik / MAWP</span><span class="val" data-o="dLMawp" data-d="2"></span></div>
+      <div class="cell"><span class="name">Patlama (Faupel) / MAWP<span class="h">ASME VIII-1 tipik olarak 3–4 hedefler</span></span><span class="val" data-o="dBurstMawp" data-d="2"></span></div>
+      <div class="cell"><span class="name">Patlama / işletme basıncı</span><span class="val" data-o="dBurstOp" data-d="2"></span></div>
+    </details>
+    <details class="list">
+      <summary>Dikkate alınmayanlar <span class="chev">›</span></summary>
+      <div class="note">Kaynaklar, ITAB ve kaynak kusurları · delikler, nozullar, süreksizlikler · yorulma ve çevrimsel yükleme · gevrek kırılma · korozyon, erozyon, çatlak ilerlemesi · tolerans dışı kalınlık sapmaları · sıcaklık etkisi.</div>
+      <div class="note">Patlama tahminleri korelasyondur. Gerçek patlama basıncı yalnızca deneyle belirlenir (UG-101 proof test veya Div. 3).</div>
+      <div class="note"><b>Kriyojenik servis:</b> Ostenitik paslanmazda düşük sıcaklıkta Rp0.2 ve Rm artar, sonuçlar muhafazakâr kalır. Karbon çelikte düşük sıcaklıkta gevrek kırılma baskındır ve bu formüller geçersizdir.</div>
+    </details>
+  </section>
+
+  <!-- ===================== Ligament ===================== -->
+  <section data-tab="ligament" hidden>
+    <h1>Ligament verimi</h1>
+    <p class="lede">Delik deseni olan gövdede UG-53 ligament verimini hesaplar ve E yerine kullanarak MAWP'yi düşürür.</p>
+
+    <div class="result">
+      <div class="label">Delikli MAWP</div>
+      <div class="big"><span data-o="lMawpBar" data-d="1"></span><small>bar</small></div>
+      <div class="sub">deliksiz <span data-o="mawpBar" data-d="1"></span> bar · kapasite kaybı <span data-o="lLossPct"></span></div>
+      <div class="kv3">
+        <div><div class="label">Ligament verimi, e</div><div class="v" data-o="lE" data-d="4"></div></div>
+        <div><div class="label">Hesapta kullanılan E</div><div class="v" data-o="lEuse" data-d="4"></div></div>
+      </div>
+    </div>
+
+    <div class="group-title">Delik geometrisi</div>
+    <div class="list">
+      <div class="cell in"><label for="ld">Delik çapı, d<span class="name"><span class="h">Deliğin kendi çapı</span></span></label><span class="field"><input id="ld" inputmode="decimal" autocomplete="off"><span class="u">mm</span></span></div>
+      <div class="cell in"><label for="lp">Boyuna adım, p<span class="name"><span class="h">Eksene paralel delik aralığı</span></span></label><span class="field"><input id="lp" inputmode="decimal" autocomplete="off"><span class="u">mm</span></span></div>
+      <div class="cell in"><label for="lpc">Çevresel adım, p_c<span class="name"><span class="h">Yoksa çok büyük bir sayı girin</span></span></label><span class="field"><input id="lpc" inputmode="decimal" autocomplete="off"><span class="u">mm</span></span></div>
+    </div>
+    <div class="group-title">Düzensiz adım · UG-53(b) <span class="ref">opsiyonel</span></div>
+    <div class="list">
+      <div class="cell in"><label for="lp1">Tekrar uzunluğu, p₁</label><span class="field"><input id="lp1" inputmode="decimal" autocomplete="off" placeholder="boş"><span class="u">mm</span></span></div>
+      <div class="cell in"><label for="ln">Bu uzunluktaki delik sayısı, n</label><span class="field"><input id="ln" inputmode="decimal" autocomplete="off" placeholder="boş"><span class="u">adet</span></span></div>
+    </div>
+    <div class="group-title">Diyagonal · yalnız bilgi <span class="ref">opsiyonel</span></div>
+    <div class="list">
+      <div class="cell in"><label for="lpd">Diyagonal adım, p′</label><span class="field"><input id="lpd" inputmode="decimal" autocomplete="off" placeholder="boş"><span class="u">mm</span></span></div>
+    </div>
+
+    <details class="list" open>
+      <summary>UG-53 verimleri <span class="chev">›</span></summary>
+      <div class="cell"><span class="name">(a) Eşit boyuna adım<span class="h">e = (p − d)/p</span></span><span class="val" data-o="lA" data-d="4"></span></div>
+      <div class="cell"><span class="name">(b) Düzensiz adım<span class="h">e = (p₁ − n·d)/p₁</span></span><span class="val" data-o="lB" data-d="4"></span></div>
+      <div class="cell"><span class="name">Çevresel ligament<span class="h">e_c = (p_c − d)/p_c</span></span><span class="val" data-o="lC" data-d="4"></span></div>
+      <div class="cell"><span class="name">Diyagonal (kod değeri değil)<span class="h">(p′ − d)/p′</span></span><span class="val" data-o="lD" data-d="4"></span></div>
+      <div class="cell"><span class="name">Boyuna verim, e_L</span><span class="val" data-o="lEL" data-d="4"></span></div>
+      <div class="cell"><span class="name">Çevresel eşdeğeri, 2 × e_c</span><span class="val" data-o="lEC2" data-d="4"></span></div>
+      <div class="cell"><span class="name">Kaynak birleşim verimi, E</span><span class="val" data-o="E" data-d="2"></span></div>
+    </details>
+    <details class="list" open>
+      <summary>Ligamentli MAWP <span class="chev">›</span></summary>
+      <div class="cell"><span class="name">UG-27(c)(1) · ligamentli</span><span class="val"><span data-o="lUgBar" data-d="1"></span><small>bar</small></span></div>
+      <div class="cell"><span class="name">Ek 1-2(a)(1) · ligamentli</span><span class="val"><span data-o="lA12Bar" data-d="1"></span><small>bar</small></span></div>
+      <div class="cell"><span class="name">Yöntem</span><span class="val" data-o="method"></span></div>
+    </details>
+    <div class="group-title">Kontroller</div>
+    <div class="list">
+      <div class="cell status-cell"><span class="name">d &lt; p</span><span class="val"><span class="pill" data-o="lChk1"></span></span></div>
+      <div class="cell status-cell"><span class="name">d &lt; p_c</span><span class="val"><span class="pill" data-o="lChk2"></span></span></div>
+      <div class="cell status-cell"><span class="name">Düzensiz adım tutarlı mı?</span><span class="val"><span class="pill" data-o="lChk3"></span></span></div>
+      <div class="cell status-cell"><span class="name">Verim makul mü?</span><span class="val"><span class="pill" data-o="lChk4"></span></span></div>
+    </div>
+    <details class="list">
+      <summary>Notlar ve sınırlar <span class="chev">›</span></summary>
+      <div class="note"><b>UG-53 mi, UG-37 mi?</b> Ligament verimi delik deseni (boru demeti, delikli başlık, kollektör) içindir. Tek bir delik için UG-37 takviye alanı hesabı yapılır. İkisi aynı anda uygulanmaz.</div>
+      <div class="note"><b>Diyagonal ligament:</b> Geometrik oran kod değeri değildir. Verim Şekil UG-53.4 / UG-53.5 grafiklerinden okunmalı ve elle kıyaslanmalıdır.</div>
+      <div class="note"><b>Çevresel ligament</b> yalnızca boyuna gerilmeyi taşır, bu da hoop gerilmesinin yarısıdır. Bu yüzden 2 katı alınır ve boyuna verimle karşılaştırılıp küçüğü kullanılır.</div>
+      <div class="note"><b>Kaynak verimi:</b> Ligament verimi kaynak veriminin yerine geçmez; ikisinin küçüğü kullanılır.</div>
+      <div class="note">Delik çevresindeki gerilme yığılması, delik kenarı yorulması ve nozul yükleri hesaplanmaz.</div>
+    </details>
+  </section>
+
+  <!-- ===================== Tank ===================== -->
+  <section data-tab="tank" hidden>
+    <h1>Tank boyutu</h1>
+    <p class="lede">1:2 eliptik kepli silindirik tankın hacmini veya boyunu hesaplar.</p>
+
+    <div class="result">
+      <div class="label">Hedef hacim için tank boyu</div>
+      <div class="big"><span data-o="kTankL" data-d="0"></span><small>mm</small></div>
+      <div class="sub">silindir boyu <span data-o="kCylL" data-d="1"></span> mm</div>
+      <div class="kv3">
+        <div><div class="label">Verilen boyda hacim</div><div class="v"><span data-o="kVol" data-d="4"></span><small>m³</small></div></div>
+        <div><div class="label">İç çap, ID</div><div class="v"><span data-o="kID" data-d="1"></span><small>mm</small></div></div>
+      </div>
+    </div>
+
+    <div class="group-title">Gövde</div>
+    <div class="list">
+      <div class="cell in"><label for="kOD">Dış çap, OD</label><span class="field"><input id="kOD" inputmode="decimal" autocomplete="off"><span class="u">mm</span></span></div>
+      <div class="cell in"><label for="kt">Nominal et kalınlığı</label><span class="field"><input id="kt" inputmode="decimal" autocomplete="off"><span class="u">mm</span></span></div>
+    </div>
+    <div class="group-title">Bilinen değer <span class="ref">hangisi biliniyorsa</span></div>
+    <div class="list">
+      <div class="cell in"><label for="kV">Hacim<span class="name"><span class="h">→ silindir ve tank boyu</span></span></label><span class="field"><input id="kV" inputmode="decimal" autocomplete="off"><span class="u">m³</span></span></div>
+      <div class="cell in"><label for="kL">Boy<span class="name"><span class="h">→ tank hacmi</span></span></label><span class="field"><input id="kL" inputmode="decimal" autocomplete="off"><span class="u">mm</span></span></div>
+    </div>
+  </section>
+
+  <!-- ===================== Bilgi ===================== -->
+  <section data-tab="bilgi" hidden>
+    <h1>Malzeme ve formüller</h1>
+    <p class="lede">İzin verilen gerilme tablosu, kullanılan formüller ve aracın sınırları.</p>
+
+    <div class="group-title">İzin verilen gerilme S [MPa] <span class="ref">ASME II-D mertebesi</span></div>
+    <div class="list"><div class="tablewrap"><table id="matTable"></table></div>
+      <div class="note">Değerler yönlendiricidir; ASME II-A ve II-D'nin yürürlükteki baskısından doğrulanmalıdır. 38 °C altında 38 °C değeri kullanılır. 400 °C üstünde sürünme rejimi başlar ve araç geçersizdir. Rp0.2 ve Rm oda sıcaklığı değerleridir.</div>
+    </div>
+
+    <div class="group-title">Kod formülleri</div>
+    <div class="list">
+      <div class="formula"><div class="t">UG-27(c)(1) · çevresel</div><code>P = S·E·t / (R + 0,6·t)   ·   t = P·Ro / (S·E + 0,4·P)</code></div>
+      <div class="formula"><div class="t">UG-27(c)(2) · boyuna</div><code>P = 2·S·E·t / (R − 0,4·t)   ·   t = P·Ro / (2·S·E + 1,4·P)</code></div>
+      <div class="formula"><div class="t">Ek 1-2(a)(1) · kalın cidar, çevresel</div><code>P = S·E·(Z−1)/(Z+1),   Z = (Ro/R)²</code></div>
+      <div class="formula"><div class="t">Ek 1-2(a)(2) · kalın cidar, boyuna</div><code>P = S·E·(Z−1)</code></div>
+      <div class="formula"><div class="t">B31.3 para. 304.1.2</div><code>P = 2·S·E·W·t / (D − 2·Y·t)   ·   t = P·D / (2·(S·E·W + P·Y))</code></div>
+      <div class="formula"><div class="t">Barlow (kod değil)</div><code>P = 2·S·t / OD</code></div>
+      <div class="formula"><div class="t">Lamé · çevresel / von Mises, iç yüzey</div><code>σθ = P·(Ro² + R²)/(Ro² − R²)   ·   σvm = √3·P·Ro² / (Ro² − R²)</code></div>
+    </div>
+
+    <div class="group-title">Dayanım formülleri</div>
+    <div class="list">
+      <div class="formula"><div class="t">İlk akma · von Mises / Tresca</div><code>Py = Rp0.2·(1 − 1/K²)/√3   ·   Py = Rp0.2·(1 − 1/K²)/2,   K = Ro/R</code></div>
+      <div class="formula"><div class="t">Tam plastik · von Mises / Tresca</div><code>PL = (2/√3)·Rp0.2·ln K   ·   PL = Rp0.2·ln K</code></div>
+      <div class="formula"><div class="t">Patlama · basit / Faupel</div><code>Pb = (2/√3)·Rm·ln K   ·   Pb = (2/√3)·Rp0.2·ln K·(2 − Rp0.2/Rm)</code></div>
+    </div>
+
+    <div class="group-title">Geçerlilik sınırları</div>
+    <div class="list">
+      <div class="note"><b>UG-27:</b> t ≤ 0,5·R ve P ≤ 0,385·S·E. Biri aşılırsa Ek 1-2 zorunludur.</div>
+      <div class="note"><b>B31.3:</b> t &lt; D/6. Aşılırsa 304.1.2(b) ve Ek 3-F gerekir.</div>
+      <div class="note"><b>Kapsam:</b> İç basınç altında düz silindirik kabuk / boru gövdesi.</div>
+    </div>
+
+    <div class="group-title">Bu araç neyi hesaplamaz</div>
+    <div class="list">
+      <div class="note">Kapaklar (UG-32) · tekil delik takviyesi (UG-37–45) · dış basınç / burkulma (UG-28) · süreksizlik gerilmeleri · yorulma · dış yükler · gevrek kırılma / MDMT (UCS-66, UHA-51) · delik ve nozul çevresinde gerilme yığılması.</div>
+      <div class="note"><b>Uyarı:</b> Bu araç ön boyutlandırma içindir. Sonuçlar onaylı bir tasarım hesabının yerine geçmez; imalat öncesi yetkin bir basınçlı kap tasarımcısı tarafından yürürlükteki kod baskısına göre doğrulanmalıdır.</div>
+    </div>
+    <p class="foot">1 MPa = 10 bar · Değerler bu cihazda saklanır.</p>
+  </section>
+</div>
+
+<nav class="tabbar" aria-label="Sekmeler"><div class="in" role="tablist">
+  <button type="button" role="tab" data-go="hesap" aria-selected="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 13l4-4M12 3v2"/></svg><span>Basınç</span></button>
+  <button type="button" role="tab" data-go="ters"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="5"/><path d="M12 3.5v3.5"/></svg><span>Kalınlık</span></button>
+  <button type="button" role="tab" data-go="dayanim"><svg viewBox="0 0 24 24"><path d="M4 20h16M6 20V10M12 20V5M18 20v-7"/></svg><span>Dayanım</span></button>
+  <button type="button" role="tab" data-go="ligament"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="8" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="16" cy="12" r="1.6"/></svg><span>Ligament</span></button>
+  <button type="button" role="tab" data-go="tank"><svg viewBox="0 0 24 24"><path d="M7 6h10a4 3 0 0 1 0 6v0a4 3 0 0 1 0 6H7a4 3 0 0 1 0-6v0a4 3 0 0 1 0-6z"/></svg><span>Tank</span></button>
+  <button type="button" role="tab" data-go="bilgi"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg><span>Bilgi</span></button>
+</div></nav>
+
+<script>
+/*CALC-START*/
+const TEMPS = [38, 100, 150, 200, 250, 300, 350, 400];
+// [ad, S @ TEMPS (MPa), Rp0.2, Rm, min servis sıc.]
+const MAT = [
+  ["SA-106 Gr.B (karbon, dikişsiz boru)", [138,138,138,138,134,128,120,111], 240, 415, "−29 °C"],
+  ["SA-333 Gr.6 (düşük sıcaklık karbon)", [138,138,138,138,134,128,120,111], 240, 415, "−45 °C"],
+  ["SA-516 Gr.70 (karbon levha)", [138,138,138,138,134,128,120,111], 260, 485, "−29 °C"],
+  ["SA-312 TP304", [138,138,130,122,116,111,107,104], 205, 515, "−254 °C"],
+  ["SA-312 TP304L", [115,101,94,88,83,79,77,75], 170, 485, "−254 °C"],
+  ["SA-312 TP304/304L (çift sertifikalı)", [138,138,130,122,116,111,107,104], 205, 515, "−254 °C"],
+  ["SA-312 TP316", [138,138,134,127,120,115,112,109], 205, 515, "−254 °C"],
+  ["SA-312 TP316L", [115,107,100,94,89,85,82,80], 170, 485, "−254 °C"],
+  ["SA-312 TP316/316L (çift sertifikalı)", [138,138,134,127,120,115,112,109], 205, 515, "−254 °C"],
+  ["SA-312 TP321", [138,138,135,130,124,119,116,113], 205, 515, "−254 °C"],
+  ["SA-240 304L (levha)", [115,101,94,88,83,79,77,75], 170, 485, "−254 °C"],
+  ["SA-182 F304L (dövme)", [115,101,94,88,83,79,77,75], 170, 485, "−254 °C"],
+  ["MANUEL — değerleri elle gir", [0,0,0,0,0,0,0,0], 0, 0, "—"],
+];
+const DEFAULTS = {
+  OD: "168", tnom: "30", mat: "SA-312 TP304", T: "-196", E: "1", tol: "0", c: "0", W: "1", Y: "0,4", Sman: "", Pop: "2,5",
+  rOD: "168", rP: "450", rTsel: "30",
+  dRo: "85", dR: "25", dRp: "", dRm: "", dPop: "200",
+  ld: "11,78", lp: "70", lpc: "150", lp1: "", ln: "", lpd: "",
+  kOD: "323", kt: "35", kV: "0,135", kL: "3020",
+};
+function num(x) {
+  if (x === undefined || x === null) return NaN;
+  const s = String(x).trim().replace(/\s/g, "").replace(",", ".");
+  if (s === "" || s === "-" || s === ".") return NaN;
+  return Number(s);
+}
+const isNum = v => typeof v === "number" && isFinite(v);
+// Excel MAX/MIN skip text cells; mimic that for optional ("") results
+const maxNum = (...a) => { const n = a.filter(isNum); return n.length ? Math.max(...n) : NaN; };
+
+function calc(raw) {
+  const i = {}; for (const k in raw) i[k] = k === "mat" ? raw[k] : num(raw[k]);
+  const o = {};
+
+  // --- Malzeme (interpolation, same as Malzeme!B28:B37)
+  let row = MAT.findIndex(m => m[0] === i.mat); if (row < 0) row = 3;
+  const m = MAT[row];
+  const Tc = Math.max(38, Math.min(400, isNum(i.T) ? i.T : NaN));
+  let ci = 0; for (let k = 0; k < 8; k++) if (TEMPS[k] <= Tc) ci = k;
+  const Tlo = TEMPS[ci], Thi = ci >= 7 ? Tlo : TEMPS[ci + 1];
+  const Slo = m[1][ci], Shi = ci >= 7 ? Slo : m[1][ci + 1];
+  o.Tc = Tc;
+  o.Stab = Thi === Tlo ? Slo : Slo + (Tc - Tlo) / (Thi - Tlo) * (Shi - Slo);
+  o.RpTab = m[2]; o.RmTab = m[3]; o.minT = m[4]; o.matRow = row;
+
+  // --- Hesap
+  const S = o.S = isNum(i.Sman) ? i.Sman : o.Stab;
+  const E = o.E = i.E;
+  o.tol = i.tol; o.c = i.c; o.WY = fmtNum(i.W, 2) + " / " + fmtNum(i.Y, 2);
+  const t = o.t = Math.max(0, i.tnom * (1 - i.tol / 100) - i.c);
+  const Ro = o.Ro = i.OD / 2, R = o.R = Ro - t;
+  o.ID = 2 * R;
+  o.ODt = t > 0 ? i.OD / t : NaN;
+  const thinGeom = t <= 0.5 * R;
+  o.wall = thinGeom ? "İnce cidar" : "KALIN CİDAR";
+  o.ug1 = S * E * t / (R + 0.6 * t);
+  o.ug2 = 2 * S * E * t / (R - 0.4 * t);
+  o.chk1 = thinGeom ? "UYGUN" : "AŞILDI → Ek 1-2 kullanılmalı";
+  o.chk2 = o.ug1 <= 0.385 * S * E ? "UYGUN" : "AŞILDI → Ek 1-2 kullanılmalı";
+  o.Z = (Ro / R) ** 2;
+  o.a1 = S * E * (o.Z - 1) / (o.Z + 1);
+  o.a2 = S * E * (o.Z - 1);
+  o.thin = thinGeom && o.ug1 <= 0.385 * S * E;
+  o.method = o.thin ? "UG-27 — ince cidar" : "Ek 1-2 — kalın cidar";
+  o.mawp = o.thin ? Math.min(o.ug1, o.ug2) : Math.min(o.a1, o.a2);
+  o.test = o.mawp * 1.5;
+  o.b313 = 2 * S * E * i.W * t / (i.OD - 2 * i.Y * t);
+  o.b313ok = t < i.OD / 6 ? "UYGUN" : "AŞILDI → 304.1.2(b) gerekir";
+  o.barlow = 2 * S * t / i.OD;
+  const p = i.Pop / 10, Ro2 = Ro * Ro, R2 = R * R;
+  o.lh = p * (Ro2 + R2) / (Ro2 - R2);
+  o.lr = -i.Pop / 10;
+  o.la = p * R2 / (Ro2 - R2);
+  o.lvm = Math.sqrt(3) * p * Ro2 / (Ro2 - R2);
+  o.use = o.mawp > 0 ? p / o.mawp : NaN;
+  o.useEval = !(o.mawp > 0) ? "—" : (p <= o.mawp ? "UYGUN — işletme basıncı MAWP altında" : "YETERSİZ — işletme basıncı MAWP üzerinde");
+
+  // --- Ters Hesap
+  const SE = S * E, rP = o.rPm = i.rP / 10, rRo = i.rOD / 2;
+  o.rUg1 = rP * rRo / (SE + 0.4 * rP);
+  o.rUg2 = rP * rRo / (2 * SE + 1.4 * rP);
+  o.rZ = SE > rP ? (SE + rP) / (SE - rP) : NaN;
+  o.rA1 = isNum(o.rZ) ? rRo * (Math.sqrt(o.rZ) - 1) / Math.sqrt(o.rZ) : NaN;
+  const q = Math.sqrt(rP / SE + 1);
+  o.rA2 = rRo * (q - 1) / q;
+  o.rB313 = rP * i.rOD / (2 * (SE * i.W + rP * i.Y));
+  o.rThin = rP <= 0.385 * SE;
+  o.rMethod = o.rThin ? "UG-27 — ince cidar" : "Ek 1-2 — kalın cidar";
+  o.rTmin = o.rThin ? maxNum(o.rUg1, o.rUg2) : maxNum(o.rA1, o.rA2);
+  o.rWithC = o.rTmin + i.c;
+  o.rOrder = o.rWithC / (1 - i.tol / 100);
+  o.rRound = Math.ceil(o.rOrder / 0.5 - 1e-9) * 0.5;
+  o.rMargin = o.rOrder > 0 ? i.rTsel / o.rOrder - 1 : NaN;
+  o.rEval = !(o.rOrder > 0) ? "—" : (i.rTsel >= o.rOrder ? "UYGUN" : "YETERSİZ — kalınlık artırılmalı");
+
+  // --- Dayanım
+  const K = o.dK = i.dRo / i.dR;
+  const Rp = isNum(i.dRp) ? i.dRp : o.RpTab, Rm = isNum(i.dRm) ? i.dRm : o.RmTab;
+  o.dRp = Rp; o.dRm = Rm;
+  o.dYvm = Rp * (1 - 1 / K ** 2) / Math.sqrt(3);
+  o.dYtr = Rp * (1 - 1 / K ** 2) / 2;
+  o.dLvm = 2 / Math.sqrt(3) * Rp * Math.log(K);
+  o.dLtr = Rp * Math.log(K);
+  o.dBs = 2 / Math.sqrt(3) * Rm * Math.log(K);
+  o.dFaupel = 2 / Math.sqrt(3) * Rp * Math.log(K) * (2 - Rp / Rm);
+  o.dDiff = o.dBs > 0 ? Math.abs(o.dFaupel - o.dBs) / o.dBs : NaN;
+  o.dYMawp = o.mawp > 0 ? o.dYvm / o.mawp : NaN;
+  o.dLMawp = o.mawp > 0 ? o.dLvm / o.mawp : NaN;
+  o.dBurstMawp = o.mawp > 0 ? o.dFaupel / o.mawp : NaN;
+  o.dBurstOp = i.dPop > 0 ? o.dFaupel / (i.dPop / 10) : NaN;
+  o.dYieldAtOp = !(o.dYvm > 0) ? "—" : (i.dPop / 10 < o.dYvm ? "HAYIR — elastik bölgede" : "EVET — iç yüzeyde akma başlar");
+
+  // --- Ligament
+  const d = i.ld;
+  o.lA = i.lp > 0 ? Math.max(0, (i.lp - d) / i.lp) : NaN;
+  o.lB = (isNum(i.lp1) && isNum(i.ln) && i.lp1 > 0) ? Math.max(0, (i.lp1 - i.ln * d) / i.lp1) : NaN;
+  o.lC = i.lpc > 0 ? Math.max(0, (i.lpc - d) / i.lpc) : NaN;
+  o.lD = (isNum(i.lpd) && i.lpd > 0) ? Math.max(0, (i.lpd - d) / i.lpd) : NaN;
+  o.lEL = isNum(o.lB) ? o.lB : o.lA;
+  o.lEC2 = isNum(o.lC) ? Math.min(1, 2 * o.lC) : NaN;
+  o.lE = isNum(o.lEC2) ? Math.min(o.lEL, o.lEC2) : o.lEL;
+  o.lEuse = Math.min(o.lE, E);
+  o.lUg = S * o.lEuse * t / (R + 0.6 * t);
+  o.lA12 = S * o.lEuse * ((Ro / R) ** 2 - 1) / ((Ro / R) ** 2 + 1);
+  o.lMawp = o.thin ? o.lUg : o.lA12;
+  o.lLoss = o.mawp > 0 ? 1 - o.lMawp / o.mawp : NaN;
+  o.lChk1 = d < i.lp ? "UYGUN" : "HATA — delik çapı boyuna adımdan büyük";
+  o.lChk2 = d < i.lpc ? "UYGUN" : "HATA — delik çapı çevresel adımdan büyük";
+  o.lChk3 = !isNum(i.lp1) ? "kullanılmıyor" : ((isNum(i.ln) ? i.ln : 0) * d < i.lp1 ? "UYGUN" : "HATA — delikler tekrar uzunluğuna sığmıyor");
+  o.lChk4 = o.lEuse < 0.2 ? "DÜŞÜK — desen gözden geçirilmeli" : (o.lEuse >= 1 ? "1,0 — delik etkisi yok" : "UYGUN");
+
+  // --- Tank (1:2 eliptik kepli)
+  const kID = o.kID = i.kOD - i.kt * 2;
+  o.kVol = (Math.PI * (kID / 2 / 1000) ** 2) * (i.kL + kID / 3) / 1000;
+  o.kCylL = (i.kV * 4 / (Math.PI * (kID / 1000) ** 2) - kID / 3000) * 1000;
+  o.kTankL = o.kCylL + (kID / 4 + i.kt) * 2;
+
+  // bar versions (1 MPa = 10 bar)
+  for (const k of ["mawp","test","b313","ug1","ug2","a1","a2","barlow","dYvm","dYtr","dLvm","dLtr","dBs","dFaupel","lUg","lA12","lMawp"]) o[k + "Bar"] = o[k] * 10;
+  return o;
+}
+function fmtNum(v, d) {
+  if (!isNum(v)) return "—";
+  return v.toLocaleString("tr-TR", { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+/*CALC-END*/
+
+const KEY = "boru-hesap-v1";
+const state = Object.assign({}, DEFAULTS);
+try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s) for (const k in DEFAULTS) if (typeof s[k] === "string") state[k] = s[k]; } catch (e) {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} };
+
+const matSel = document.getElementById("mat");
+matSel.innerHTML = MAT.map(m => `<option>${m[0]}</option>`).join("");
+document.getElementById("matTable").innerHTML =
+  "<thead><tr><th>Malzeme</th>" + TEMPS.map(t => `<th>${t} °C</th>`).join("") + "<th>Rp0.2</th><th>Rm</th><th>Min. servis</th></tr></thead><tbody>" +
+  MAT.map((m, r) => `<tr data-row="${r}"><td>${m[0]}</td>${m[1].map(v => `<td>${v}</td>`).join("")}<td>${m[2]}</td><td>${m[3]}</td><td>${m[4]}</td></tr>`).join("") + "</tbody>";
+
+function fillInputs() {
+  for (const k in DEFAULTS) { const el = document.getElementById(k); if (el) el.value = state[k]; }
+}
+const pct = (v, d = 1) => isNum(v) ? "%" + fmtNum(v * 100, d) : "—";
+function statusClass(s) {
+  if (typeof s !== "string" || s === "—" || s === "kullanılmıyor") return "info";
+  if (/^(UYGUN|HAYIR|1,0)/.test(s)) return "ok";
+  if (/^(AŞILDI|DÜŞÜK)/.test(s)) return "warn";
+  return "bad";
+}
+function render() {
+  const o = calc(state);
+  document.querySelectorAll("[data-o]").forEach(el => {
+    const v = o[el.dataset.o];
+    if (el.classList.contains("pill") && !el.classList.contains("info")) {
+      el.className = "pill " + statusClass(v); el.textContent = v ?? "—"; return;
+    }
+    if (typeof v === "string") el.textContent = v;
+    else if (el.dataset.d !== undefined) el.textContent = fmtNum(v, +el.dataset.d);
+  });
+  // derived labels
+  const set = (k, txt) => document.querySelectorAll(`[data-o="${k}"]`).forEach(el => el.textContent = txt);
+  set("usePct", pct(o.use));
+  set("rMarginPct", isNum(o.rMargin) ? (o.rMargin >= 0 ? "+" : "") + pct(o.rMargin) : "—");
+  set("dDiffPct", pct(o.dDiff));
+  set("lLossPct", pct(o.lLoss));
+  set("Ssrc", isNum(num(state.Sman)) ? "Manuel giriş" : `Tablodan, ${fmtNum(o.Tc, 0)} °C'de interpolasyon`);
+  set("dRpSrc", isNum(num(state.dRp)) ? "Manuel giriş" : `Tablo: ${fmtNum(o.RpTab, 0)} MPa`);
+  set("dRmSrc", isNum(num(state.dRm)) ? "Manuel giriş" : `Tablo: ${fmtNum(o.RmTab, 0)} MPa`);
+  const T = num(state.T);
+  set("tempNote", !isNum(T) ? "" : T > 400 ? "400 °C üstü: araç geçersiz (sürünme)" : T < 38 ? `38 °C altı → 38 °C alınır · min. servis ${o.minT}` : `Min. servis ${o.minT}`);
+  const bar = document.getElementById("useBar");
+  const u = o.use;
+  bar.className = "bar" + (!isNum(u) ? "" : u > 1 ? " bad" : u > 0.9 ? " warn" : "");
+  bar.firstElementChild.style.width = isNum(u) ? Math.min(100, Math.max(0, u * 100)) + "%" : "0";
+  document.querySelectorAll("#matTable tr[data-row]").forEach(tr => tr.classList.toggle("sel", +tr.dataset.row === o.matRow));
+  return o;
+}
+
+document.querySelectorAll("input, select").forEach(el => {
+  if (!(el.id in DEFAULTS)) return;
+  el.addEventListener("input", () => { state[el.id] = el.value; save(); render(); });
+});
+document.querySelectorAll("[data-sign]").forEach(b => b.addEventListener("click", () => {
+  const el = document.getElementById(b.dataset.sign);
+  el.value = el.value.trim().startsWith("-") ? el.value.trim().slice(1) : "-" + el.value.trim();
+  state[el.id] = el.value; save(); render();
+}));
+document.getElementById("pullGeom").addEventListener("click", () => {
+  const o = calc(state);
+  if (isNum(o.Ro) && isNum(o.R)) { state.dRo = fmtNum(o.Ro, 2).replace(/\./g, ""); state.dR = fmtNum(o.R, 2).replace(/\./g, ""); save(); fillInputs(); render(); }
+});
+const resetBtn = document.getElementById("resetBtn");
+let resetArmed = false;
+resetBtn.addEventListener("click", () => {
+  if (!resetArmed) { resetArmed = true; resetBtn.textContent = "Emin misiniz? Tekrar dokunun"; setTimeout(() => { resetArmed = false; resetBtn.textContent = "Örnek değerler"; }, 3000); return; }
+  resetArmed = false; resetBtn.textContent = "Örnek değerler";
+  Object.assign(state, DEFAULTS); save(); fillInputs(); render();
+});
+
+function go(tab) {
+  document.querySelectorAll("section[data-tab]").forEach(s => s.hidden = s.dataset.tab !== tab);
+  document.querySelectorAll("[data-go]").forEach(b => b.setAttribute("aria-selected", String(b.dataset.go === tab)));
+  try { localStorage.setItem(KEY + "-tab", tab); } catch (e) {}
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll("[data-go]").forEach(b => b.addEventListener("click", () => go(b.dataset.go)));
+let startTab = "hesap";
+const hash = location.hash.slice(1);
+try { startTab = localStorage.getItem(KEY + "-tab") || startTab; } catch (e) {}
+if (document.querySelector(`section[data-tab="${hash}"]`)) startTab = hash;
+
+fillInputs(); render(); go(startTab);
+</script>
+<script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});</script>
+</body>
+</html>
